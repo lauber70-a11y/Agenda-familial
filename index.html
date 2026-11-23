@@ -1,0 +1,1245 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mur Familial — Calendrier & Synchronisation</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        hand: ['Caveat', 'cursive'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #FAF8F5;
+            color: #1F2937;
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        @keyframes popIn {
+            0% { transform: scale(0.95); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop { animation: popIn 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col pb-24 md:pb-8">
+
+    <!-- EN-TÊTE PRINCIPAL -->
+    <header class="bg-white/90 backdrop-blur-md border-b border-stone-200 sticky top-0 z-30 shadow-xs">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                
+                <!-- Identité, Code Tribu & Date -->
+                <div class="flex items-center gap-3">
+                    <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-xl shadow-md">
+                        <i class="fa-solid fa-house-chimney-heart"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <h1 id="family-title-display" class="text-xl sm:text-2xl font-extrabold text-stone-800 tracking-tight cursor-pointer hover:text-orange-600 transition-colors" onclick="openSettingsModal()" title="Cliquer pour modifier">
+                                Famille Dupont
+                            </h1>
+                            <button onclick="openSettingsModal()" class="text-stone-400 hover:text-orange-500 text-xs p-1 rounded-lg">
+                                <i class="fa-solid fa-pen"></i>
+                            </button>
+                            <span onclick="openShareModal()" id="sync-tribe-badge" class="cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition shadow-2xs">
+                                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                <span id="sync-tribe-text">Tribu : DUPONT-2026</span>
+                            </span>
+                        </div>
+                        <p id="current-date-subtitle" class="text-xs sm:text-sm text-stone-500 font-medium capitalize">
+                            Lundi 16 novembre 2026
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Filtres par membre -->
+                <div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 max-w-full">
+                    <button onclick="setMemberFilter('all')" id="filter-btn-all" class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all border shadow-xs">
+                        <span>👨‍👩‍👧‍👦</span>
+                        <span>Tous</span>
+                    </button>
+                    <div id="member-filters-container" class="flex items-center gap-2"></div>
+                    <button onclick="openMemberModal()" class="w-8 h-8 rounded-full border-2 border-dashed border-stone-300 text-stone-500 hover:border-orange-400 hover:text-orange-500 flex items-center justify-center shrink-0 transition-colors" title="Ajouter un membre">
+                        <i class="fa-solid fa-plus text-xs"></i>
+                    </button>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex items-center gap-2">
+                    <button onclick="openNotificationsModal()" class="relative p-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-600 transition-colors" title="Notifications">
+                        <i class="fa-solid fa-bell"></i>
+                        <span id="unread-notifications-badge" class="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-xs hidden">0</span>
+                    </button>
+                    <button onclick="openShareModal()" class="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 font-semibold text-sm border border-amber-200/80 transition-all">
+                        <i class="fa-solid fa-share-nodes"></i>
+                        <span>Tribu & Partage</span>
+                    </button>
+                    <button onclick="openSettingsModal()" class="p-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-600 transition-colors">
+                        <i class="fa-solid fa-gear"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- NAVIGATION -->
+            <nav class="hidden md:flex items-center gap-2 mt-3 pt-2 border-t border-stone-100">
+                <button onclick="switchTab('calendar')" data-tab="calendar" class="nav-tab flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all bg-stone-100 text-stone-900 font-bold">
+                    <i class="fa-regular fa-calendar-days"></i>
+                    <span>Calendrier</span>
+                </button>
+                <button onclick="switchTab('lists')" data-tab="lists" class="nav-tab flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all text-stone-600 hover:bg-stone-50">
+                    <i class="fa-solid fa-list-check"></i>
+                    <span>Listes & Courses</span>
+                </button>
+                <button onclick="switchTab('chores')" data-tab="chores" class="nav-tab flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all text-stone-600 hover:bg-stone-50">
+                    <i class="fa-solid fa-star"></i>
+                    <span>Tâches & Étoiles</span>
+                </button>
+                <button onclick="switchTab('wall')" data-tab="wall" class="nav-tab flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all text-stone-600 hover:bg-stone-50">
+                    <i class="fa-regular fa-note-sticky"></i>
+                    <span>Mur & Souvenirs</span>
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- CONTENU -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-5">
+
+        <!-- ONGLET CALENDRIER -->
+        <section id="tab-calendar" class="tab-content space-y-5">
+            <div class="bg-white rounded-2xl p-4 shadow-xs border border-stone-200/70 flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-2 sm:gap-3">
+                    <div class="flex items-center bg-stone-100 rounded-xl p-1">
+                        <button onclick="navigateCalendar(-1)" class="w-9 h-9 rounded-lg hover:bg-white flex items-center justify-center text-stone-600"><i class="fa-solid fa-chevron-left"></i></button>
+                        <button onclick="goToToday()" class="px-3 py-1.5 text-xs sm:text-sm font-semibold text-stone-700 hover:bg-white rounded-lg">Aujourd'hui</button>
+                        <button onclick="navigateCalendar(1)" class="w-9 h-9 rounded-lg hover:bg-white flex items-center justify-center text-stone-600"><i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
+                    <h2 id="calendar-period-title" class="text-lg sm:text-xl font-bold text-stone-800 capitalize">Novembre 2026</h2>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button type="button" id="header-add-event-btn" class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm shadow-sm transition-all cursor-pointer">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>Événement</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+                <div class="lg:col-span-8 bg-white rounded-2xl shadow-xs border border-stone-200/70 overflow-hidden">
+                    <div class="grid grid-cols-7 bg-stone-50 border-b border-stone-200/70 text-center py-2.5 text-xs font-bold uppercase tracking-wider text-stone-500">
+                        <div>Lun</div><div>Mar</div><div>Mer</div><div>Jeu</div><div>Ven</div><div class="text-orange-600">Sam</div><div class="text-orange-600">Dim</div>
+                    </div>
+                    <div id="calendar-month-grid" class="grid grid-cols-7 divide-x divide-y divide-stone-100"></div>
+                </div>
+
+                <div class="lg:col-span-4 bg-white rounded-2xl p-5 shadow-xs border border-stone-200/70 space-y-4">
+                    <div class="flex items-center justify-between border-b border-stone-100 pb-3">
+                        <div>
+                            <span class="text-xs font-bold uppercase tracking-wider text-orange-500">Programme du jour</span>
+                            <h3 id="selected-day-title" class="text-lg font-bold text-stone-800 capitalize">Lundi 16 novembre</h3>
+                        </div>
+                        <button type="button" id="sidebar-add-event-btn" class="w-9 h-9 rounded-xl bg-orange-50 hover:bg-orange-100 text-orange-600 flex items-center justify-center transition-colors cursor-pointer" title="Ajouter un événement">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                    </div>
+                    <div id="selected-day-events" class="space-y-3 min-h-[180px]"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ONGLET LISTES -->
+        <section id="tab-lists" class="tab-content hidden space-y-5">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <h2 class="text-xl font-bold text-stone-800">Listes Partagées</h2>
+                    <p class="text-sm text-stone-500">Synchronisées en temps réel</p>
+                </div>
+                <button onclick="openNewListModal()" class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm shadow-sm transition-all">
+                    <i class="fa-solid fa-folder-plus"></i>
+                    <span>Nouvelle liste</span>
+                </button>
+            </div>
+            <div id="lists-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+        </section>
+
+        <!-- ONGLET TÂCHES -->
+        <section id="tab-chores" class="tab-content hidden space-y-5">
+            <div class="bg-gradient-to-r from-amber-50 via-orange-50 to-rose-50 rounded-2xl p-5 border border-amber-200/60">
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-stone-800">🏆 Tableau des Étoiles</h2>
+                        <p class="text-sm text-stone-600">Validez les missions pour gagner des étoiles</p>
+                    </div>
+                    <button onclick="openChoreModal()" class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold text-sm shadow-sm">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>Nouvelle mission</span>
+                    </button>
+                </div>
+                <div id="chores-scoreboard" class="grid grid-cols-2 sm:grid-cols-4 gap-3"></div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <div class="bg-white rounded-2xl p-5 shadow-xs border border-stone-200/70">
+                    <h3 class="text-base font-bold text-stone-800 mb-3">📋 Missions à faire</h3>
+                    <div id="pending-chores-list" class="space-y-2.5"></div>
+                </div>
+                <div class="bg-white rounded-2xl p-5 shadow-xs border border-stone-200/70">
+                    <h3 class="text-base font-bold text-stone-800 mb-3">✅ Missions accomplies</h3>
+                    <div id="completed-chores-list" class="space-y-2.5"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ONGLET MUR -->
+        <section id="tab-wall" class="tab-content hidden space-y-5">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <h2 class="text-xl font-bold text-stone-800">Le Mur des Mots & Souvenirs</h2>
+                    <p class="text-sm text-stone-500">Post-its et photos en direct</p>
+                </div>
+                <button onclick="openNoteModal()" class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-semibold text-sm shadow-sm">
+                    <i class="fa-solid fa-thumbtack"></i>
+                    <span>Épingler un mot</span>
+                </button>
+            </div>
+            <div id="wall-notes-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 items-start"></div>
+        </section>
+
+    </main>
+
+    <!-- NAVIGATION MOBILE -->
+    <nav class="md:hidden fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-stone-200 z-30 flex justify-around items-center py-2 px-1 shadow-lg">
+        <button onclick="switchTab('calendar')" data-tab="calendar" class="mobile-nav-tab flex flex-col items-center gap-1 px-3 py-1 text-xs font-bold text-stone-900">
+            <i class="fa-regular fa-calendar-days text-lg"></i>
+            <span>Agenda</span>
+        </button>
+        <button onclick="switchTab('lists')" data-tab="lists" class="mobile-nav-tab flex flex-col items-center gap-1 px-3 py-1 text-xs font-semibold text-stone-600">
+            <i class="fa-solid fa-list-check text-lg"></i>
+            <span>Listes</span>
+        </button>
+        <button onclick="switchTab('chores')" data-tab="chores" class="mobile-nav-tab flex flex-col items-center gap-1 px-3 py-1 text-xs font-semibold text-stone-600">
+            <i class="fa-solid fa-star text-lg"></i>
+            <span>Tâches</span>
+        </button>
+        <button onclick="switchTab('wall')" data-tab="wall" class="mobile-nav-tab flex flex-col items-center gap-1 px-3 py-1 text-xs font-semibold text-stone-600">
+            <i class="fa-regular fa-note-sticky text-lg"></i>
+            <span>Mur</span>
+        </button>
+    </nav>
+
+    <!-- MODALE ÉVÉNEMENT -->
+    <div id="event-modal" class="fixed inset-0 bg-stone-900/50 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl animate-pop max-h-[92vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-4">
+                <h3 id="event-modal-title" class="text-xl font-bold text-stone-800">Nouvel événement</h3>
+                <button onclick="closeModal('event-modal')" class="w-8 h-8 rounded-full bg-stone-100 text-stone-500 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form onsubmit="saveEvent(event)" class="space-y-4">
+                <input type="hidden" id="event-id">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-stone-500 mb-1">Titre *</label>
+                    <input type="text" id="event-title" required placeholder="Ex: Entraînement..." class="w-full px-4 py-2.5 rounded-xl border border-stone-200 text-sm">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-stone-500 mb-1">Date *</label>
+                        <input type="date" id="event-date" required class="w-full px-3 py-2.5 rounded-xl border border-stone-200 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-stone-500 mb-1">Début</label>
+                        <input type="time" id="event-start" value="14:00" class="w-full px-3 py-2.5 rounded-xl border border-stone-200 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-stone-500 mb-1">Fin</label>
+                        <input type="time" id="event-end" value="15:30" class="w-full px-3 py-2.5 rounded-xl border border-stone-200 text-sm">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-stone-500 mb-1.5">Membres *</label>
+                    <div id="event-members-selector" class="flex flex-wrap gap-2"></div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-stone-500 mb-1">Catégorie</label>
+                        <select id="event-category" class="w-full px-3 py-2.5 rounded-xl border border-stone-200 text-sm bg-white">
+                            <option value="school">🎒 École</option>
+                            <option value="sport">⚽ Sport</option>
+                            <option value="medical">🩺 Médecin</option>
+                            <option value="birthday">🎂 Anniversaire</option>
+                            <option value="outing">🎡 Sortie</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-stone-500 mb-1">Lieu</label>
+                        <input type="text" id="event-location" placeholder="Ex: Stade" class="w-full px-3 py-2.5 rounded-xl border border-stone-200 text-sm">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-stone-500 mb-1">Note</label>
+                    <textarea id="event-note" rows="2" class="w-full px-4 py-2 rounded-xl border border-stone-200 text-sm"></textarea>
+                </div>
+                <div class="flex items-center justify-between pt-2">
+                    <button type="button" id="delete-event-btn" onclick="deleteCurrentEvent()" class="hidden px-4 py-2.5 rounded-xl bg-rose-50 text-rose-600 font-semibold text-sm">Supprimer</button>
+                    <div class="flex gap-2 ml-auto">
+                        <button type="button" onclick="closeModal('event-modal')" class="px-4 py-2.5 rounded-xl bg-stone-100 text-stone-700 font-semibold text-sm">Annuler</button>
+                        <button type="submit" class="px-5 py-2.5 rounded-xl bg-orange-500 text-white font-semibold text-sm">Enregistrer</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODALE PARTAGE -->
+    <div id="share-modal" class="fixed inset-0 bg-stone-900/50 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl animate-pop space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="text-xl font-bold text-stone-800">Synchronisation Multi-Postes</h3>
+                <button onclick="closeModal('share-modal')" class="w-8 h-8 rounded-full bg-stone-100 text-stone-500 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="space-y-3">
+                <p class="text-sm text-stone-600">Connectez vos tablettes et téléphones en temps réel avec le <strong>Code Tribu</strong>.</p>
+                <div class="bg-emerald-50 p-3.5 rounded-2xl border border-emerald-200 space-y-2">
+                    <label class="text-xs font-bold uppercase text-emerald-800">Code Tribu Actif</label>
+                    <div class="flex items-center gap-2">
+                        <input type="text" id="share-tribe-code-display" readonly class="w-full bg-white px-3 py-2 rounded-xl border border-emerald-200 text-xs font-mono font-bold uppercase">
+                        <button onclick="copyTribeCode()" class="px-3.5 py-2 rounded-xl bg-emerald-600 text-white text-xs font-semibold shrink-0">Copier</button>
+                    </div>
+                </div>
+                <form onsubmit="joinAnotherTribe(event)" class="bg-stone-50 p-3.5 rounded-2xl border border-stone-200 space-y-2">
+                    <label class="text-xs font-bold uppercase text-stone-500">Rejoindre une autre tribu</label>
+                    <div class="flex items-center gap-2">
+                        <input type="text" id="join-tribe-input" required placeholder="Ex: FAMILLE-MARTIN" class="w-full bg-white px-3 py-2 rounded-xl border border-stone-200 text-xs uppercase font-mono">
+                        <button type="submit" class="px-3.5 py-2 rounded-xl bg-stone-800 text-white text-xs font-semibold shrink-0">Connecter</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALE PARAMÈTRES -->
+    <div id="settings-modal" class="fixed inset-0 bg-stone-900/50 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl animate-pop max-h-[90vh] overflow-y-auto space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="text-xl font-bold text-stone-800">Paramètres</h3>
+                <button onclick="closeModal('settings-modal')" class="w-8 h-8 rounded-full bg-stone-100 text-stone-500 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div>
+                <label class="block text-xs font-bold uppercase text-stone-500 mb-1">Nom de la famille</label>
+                <div class="flex gap-2">
+                    <input type="text" id="settings-family-name" class="w-full px-4 py-2.5 rounded-xl border border-stone-200 text-sm font-semibold">
+                    <button onclick="updateFamilyName()" class="px-4 py-2.5 rounded-xl bg-orange-500 text-white font-semibold text-sm">OK</button>
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs font-bold uppercase text-stone-500 mb-1">Membres</label>
+                <div id="settings-members-list" class="space-y-2"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALE MEMBRE -->
+    <div id="member-modal" class="fixed inset-0 bg-stone-900/50 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl animate-pop">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-bold text-stone-800">Ajouter un membre</h3>
+                <button onclick="closeModal('member-modal')" class="w-8 h-8 rounded-full bg-stone-100 text-stone-500 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form onsubmit="saveMember(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-stone-500 mb-1">Prénom *</label>
+                    <input type="text" id="member-name" required class="w-full px-4 py-2.5 rounded-xl border border-stone-200 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-stone-500 mb-1">Avatar (Emoji)</label>
+                    <input type="text" id="member-avatar" maxlength="2" value="😊" class="w-20 text-center px-3 py-2 rounded-xl border border-stone-200 text-xl">
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeModal('member-modal')" class="px-4 py-2.5 rounded-xl bg-stone-100 text-stone-700 font-semibold text-sm">Annuler</button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-orange-500 text-white font-semibold text-sm">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODALE NOUVELLE LISTE -->
+    <div id="new-list-modal" class="fixed inset-0 bg-stone-900/50 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl animate-pop">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-bold text-stone-800">Créer une liste</h3>
+                <button onclick="closeModal('new-list-modal')" class="w-8 h-8 rounded-full bg-stone-100 text-stone-500 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form onsubmit="createNewList(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-stone-500 mb-1">Nom *</label>
+                    <input type="text" id="new-list-title" required class="w-full px-4 py-2.5 rounded-xl border border-stone-200 text-sm">
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeModal('new-list-modal')" class="px-4 py-2.5 rounded-xl bg-stone-100 text-stone-700 font-semibold text-sm">Annuler</button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-emerald-600 text-white font-semibold text-sm">Créer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODALE TÂCHE -->
+    <div id="chore-modal" class="fixed inset-0 bg-stone-900/50 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl animate-pop">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-bold text-stone-800">Nouvelle mission</h3>
+                <button onclick="closeModal('chore-modal')" class="w-8 h-8 rounded-full bg-stone-100 text-stone-500 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form onsubmit="saveChore(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-stone-500 mb-1">Tâche *</label>
+                    <input type="text" id="chore-title" required class="w-full px-4 py-2.5 rounded-xl border border-stone-200 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-stone-500 mb-1">Attribuée à</label>
+                    <select id="chore-assignee" class="w-full px-3 py-2.5 rounded-xl border border-stone-200 text-sm bg-white"></select>
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeModal('chore-modal')" class="px-4 py-2.5 rounded-xl bg-stone-100 text-stone-700 font-semibold text-sm">Annuler</button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-amber-500 text-white font-semibold text-sm">Ajouter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODALE NOTE -->
+    <div id="note-modal" class="fixed inset-0 bg-stone-900/50 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl animate-pop">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-bold text-stone-800">Épingler au Mur</h3>
+                <button onclick="closeModal('note-modal')" class="w-8 h-8 rounded-full bg-stone-100 text-stone-500 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form onsubmit="saveNote(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-stone-500 mb-1">Message *</label>
+                    <textarea id="note-text" required rows="3" class="w-full px-4 py-2.5 rounded-xl border border-stone-200 text-sm"></textarea>
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeModal('note-modal')" class="px-4 py-2.5 rounded-xl bg-stone-100 text-stone-700 font-semibold text-sm">Annuler</button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-purple-600 text-white font-semibold text-sm">Publier</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODALE NOTIFICATIONS -->
+    <div id="notifications-modal" class="fixed inset-0 bg-stone-900/50 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl animate-pop max-h-[85vh] flex flex-col">
+            <div class="flex items-center justify-between pb-3 border-b border-stone-100">
+                <div class="flex items-center gap-2">
+                    <span class="w-8 h-8 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center"><i class="fa-solid fa-bell"></i></span>
+                    <h3 class="text-xl font-bold text-stone-800">Activité de la famille</h3>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="clearNotifications()" class="text-xs font-semibold text-stone-400 hover:text-rose-500 px-2 py-1 rounded-lg">Tout effacer</button>
+                    <button onclick="closeModal('notifications-modal')" class="w-8 h-8 rounded-full bg-stone-100 text-stone-500 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+            </div>
+            <div id="notifications-list" class="mt-4 space-y-2.5 overflow-y-auto flex-1 pr-1 min-h-[150px]"></div>
+        </div>
+    </div>
+
+    <!-- TOAST -->
+    <div id="toast-container" class="fixed bottom-20 md:bottom-6 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- SCRIPT APPLICATION -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const TODAY_STR = '2026-11-16';
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'family-wall-app';
+
+        let db = null;
+        let auth = null;
+        let currentUser = null;
+        let unsubscribeTribe = null;
+
+        const urlParams = new URLSearchParams(window.location.search);
+        let currentTribeCode = urlParams.get('tribu') ? urlParams.get('tribu').toUpperCase().replace(/[^A-Z0-9-]/g, '') : 'DUPONT-2026';
+
+        const CATEGORIES = {
+            school: { label: 'École', icon: '🎒', badge: 'bg-blue-50 text-blue-700 border-blue-200' },
+            sport: { label: 'Sport', icon: '⚽', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+            medical: { label: 'Médecin', icon: '🩺', badge: 'bg-rose-50 text-rose-700 border-rose-200' },
+            birthday: { label: 'Anniversaire', icon: '🎂', badge: 'bg-amber-50 text-amber-700 border-amber-200' },
+            outing: { label: 'Sortie', icon: '🎡', badge: 'bg-purple-50 text-purple-700 border-purple-200' }
+        };
+
+        function getDefaultState() {
+            return {
+                familyName: 'Famille Dupont',
+                activeTab: 'calendar',
+                currentMonthDate: '2026-11-01',
+                selectedDate: TODAY_STR,
+                memberFilter: 'all',
+                notifications: [],
+                members: [
+                    { id: 'm1', name: 'Maman', avatar: '👩', color: '#F43F5E' },
+                    { id: 'm2', name: 'Papa', avatar: '👨', color: '#3B82F6' },
+                    { id: 'm3', name: 'Léo', avatar: '👦', color: '#10B981' },
+                    { id: 'm4', name: 'Emma', avatar: '👧', color: '#8B5CF6' }
+                ],
+                events: [
+                    { id: 'e1', title: 'Sortie scolaire', date: '2026-11-16', start: '08:30', end: '16:30', memberIds: ['m3'], category: 'school', location: 'École', note: '' }
+                ],
+                lists: [
+                    { id: 'l1', title: 'Courses', icon: '🛒', items: [{ id: 'i1', text: 'Lait', checked: false }] }
+                ],
+                chores: [
+                    { id: 'c1', title: 'Mettre la table', assigneeId: 'm3', stars: 2, completed: false }
+                ],
+                notes: [
+                    { id: 'n1', authorId: 'm1', text: '📌 Bienvenue !', color: '#FEF3C7', pinned: true }
+                ]
+            };
+        }
+
+        let state = getDefaultState();
+
+        async function initFirebaseSync() {
+            try {
+                if (typeof __firebase_config === 'undefined') {
+                    initAppLocally();
+                    return;
+                }
+                const firebaseConfig = JSON.parse(__firebase_config);
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    const cred = await signInWithCustomToken(auth, __initial_auth_token);
+                    currentUser = cred.user;
+                } else {
+                    const cred = await signInAnonymously(auth);
+                    currentUser = cred.user;
+                }
+                await connectToTribe(currentTribeCode);
+            } catch (err) {
+                initAppLocally();
+            }
+        }
+
+        async function connectToTribe(tribeCode) {
+            currentTribeCode = tribeCode.toUpperCase().replace(/[^A-Z0-9-]/g, '') || 'DUPONT-2026';
+            window.history.replaceState({}, '', `${window.location.pathname}?tribu=${currentTribeCode}`);
+
+            const displayEl = document.getElementById('share-tribe-code-display');
+            if (displayEl) displayEl.value = currentTribeCode;
+            const textEl = document.getElementById('sync-tribe-text');
+            if (textEl) textEl.textContent = `Tribu : ${currentTribeCode}`;
+
+            if (unsubscribeTribe) {
+                unsubscribeTribe();
+                unsubscribeTribe = null;
+            }
+
+            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'families_data', currentTribeCode);
+            try {
+                const snap = await getDoc(docRef);
+                if (!snap.exists()) {
+                    await setDoc(docRef, { payload: JSON.stringify(getDefaultState()), updatedAt: Date.now() });
+                }
+            } catch (e) {}
+
+            unsubscribeTribe = onSnapshot(docRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    if (data && data.payload) {
+                        try {
+                            const remoteState = JSON.parse(data.payload);
+                            state = { ...remoteState, activeTab: state.activeTab, selectedDate: state.selectedDate, memberFilter: state.memberFilter };
+                            renderAll();
+                        } catch (err) {}
+                    }
+                }
+            }, (error) => {});
+        }
+
+        async function saveState() {
+            renderAll();
+            if (!db || !currentUser) {
+                try { localStorage.setItem('family_wall_state_v3', JSON.stringify(state)); } catch(e) {}
+                return;
+            }
+            try {
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'families_data', currentTribeCode);
+                await setDoc(docRef, { payload: JSON.stringify(state), updatedAt: Date.now() });
+            } catch (e) {}
+        }
+
+        function initAppLocally() {
+            try {
+                const saved = localStorage.getItem('family_wall_state_v3');
+                if (saved) state = JSON.parse(saved);
+            } catch(e) {}
+            renderAll();
+        }
+
+        function addNotification(icon, text) {
+            if (!state.notifications) state.notifications = [];
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+            state.notifications.unshift({
+                id: 'notif_' + Date.now(),
+                icon,
+                text,
+                time: `Aujourd'hui à ${timeStr}`,
+                read: false
+            });
+            if (state.notifications.length > 30) {
+                state.notifications = state.notifications.slice(0, 30);
+            }
+        }
+
+        function renderNotificationsBadge() {
+            const badge = document.getElementById('unread-notifications-badge');
+            if (!badge) return;
+            const unreadCount = (state.notifications || []).filter(n => !n.read).length;
+            if (unreadCount > 0) {
+                badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        window.openNotificationsModal = function() {
+            const listEl = document.getElementById('notifications-list');
+            const notifs = state.notifications || [];
+
+            if (listEl) {
+                if (notifs.length === 0) {
+                    listEl.innerHTML = `<div class="text-center py-10 text-stone-400 text-sm">Aucune notification pour le moment.</div>`;
+                } else {
+                    listEl.innerHTML = notifs.map(n => `
+                        <div class="flex items-start gap-3 p-3 rounded-2xl ${n.read ? 'bg-stone-50' : 'bg-orange-50/70 border border-orange-200/70'}">
+                            <span class="text-lg shrink-0 mt-0.5">${n.icon || '🔔'}</span>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-semibold text-stone-800">${n.text}</p>
+                                <span class="text-[11px] text-stone-400">${n.time || ''}</span>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            }
+
+            // Marquer toutes les notifications comme lues
+            let hasUnread = false;
+            notifs.forEach(n => {
+                if (!n.read) {
+                    n.read = true;
+                    hasUnread = true;
+                }
+            });
+            if (hasUnread) {
+                saveState();
+            } else {
+                renderNotificationsBadge();
+            }
+
+            openModal('notifications-modal');
+        };
+
+        window.clearNotifications = function() {
+            state.notifications = [];
+            saveState();
+            const listEl = document.getElementById('notifications-list');
+            if (listEl) {
+                listEl.innerHTML = `<div class="text-center py-10 text-stone-400 text-sm">Aucune notification pour le moment.</div>`;
+            }
+        };
+
+        window.showToast = function(msg) {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+            const toast = document.createElement('div');
+            toast.className = `bg-stone-800 text-white px-4 py-3 rounded-2xl shadow-xl text-sm font-semibold flex items-center gap-2 animate-pop`;
+            toast.innerHTML = `<span>✨</span><span>${msg}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        };
+
+        window.switchTab = function(tabId) {
+            state.activeTab = tabId;
+            ['calendar', 'lists', 'chores', 'wall'].forEach(id => {
+                const el = document.getElementById(`tab-${id}`);
+                if (el) el.classList.toggle('hidden', id !== tabId);
+            });
+            document.querySelectorAll('[data-tab]').forEach(btn => {
+                const isCurrent = btn.getAttribute('data-tab') === tabId;
+                btn.classList.toggle('bg-stone-100', isCurrent);
+                btn.classList.toggle('text-stone-900', isCurrent);
+                btn.classList.toggle('font-bold', isCurrent);
+                btn.classList.toggle('text-stone-600', !isCurrent);
+            });
+        };
+
+        window.openModal = function(id) {
+            const m = document.getElementById(id);
+            if (m) { m.classList.remove('hidden'); m.classList.add('flex'); }
+        };
+
+        window.closeModal = function(id) {
+            const m = document.getElementById(id);
+            if (m) { m.classList.add('hidden'); m.classList.remove('flex'); }
+        };
+
+        window.openShareModal = function() {
+            const input = document.getElementById('share-tribe-code-display');
+            if (input) input.value = currentTribeCode;
+            openModal('share-modal');
+        };
+
+        window.openSettingsModal = function() {
+            const nameInput = document.getElementById('settings-family-name');
+            if (nameInput) nameInput.value = state.familyName;
+            renderSettingsMembersList();
+            openModal('settings-modal');
+        };
+
+        window.updateFamilyName = function() {
+            const val = document.getElementById('settings-family-name').value.trim();
+            if (!val) return;
+            state.familyName = val;
+            saveState();
+            closeModal('settings-modal');
+            showToast('Nom mis à jour !');
+        };
+
+        function getMember(id) {
+            return (state.members || []).find(m => m.id === id) || { id: 'unknown', name: 'Inconnu', avatar: '👤', color: '#9CA3AF' };
+        }
+
+        window.setMemberFilter = function(memberId) {
+            state.memberFilter = (state.memberFilter === memberId && memberId !== 'all') ? 'all' : memberId;
+            renderAll();
+        };
+
+        function renderMemberFilters() {
+            const container = document.getElementById('member-filters-container');
+            const allBtn = document.getElementById('filter-btn-all');
+            if (!container || !allBtn) return;
+
+            const isAll = state.memberFilter === 'all';
+            allBtn.className = `flex items-center gap-2 px-3 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all ${isAll ? 'bg-stone-800 text-white shadow-xs' : 'bg-white text-stone-700 border border-stone-200'}`;
+
+            container.innerHTML = (state.members || []).map(m => {
+                const isSelected = state.memberFilter === m.id;
+                return `
+                    <button onclick="setMemberFilter('${m.id}')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all ${isSelected ? 'bg-stone-800 text-white shadow-xs' : 'bg-white text-stone-700 border border-stone-200'}">
+                        <span class="w-2.5 h-2.5 rounded-full" style="background-color: ${m.color}"></span>
+                        <span>${m.avatar}</span>
+                        <span>${m.name}</span>
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function renderSettingsMembersList() {
+            const list = document.getElementById('settings-members-list');
+            if (!list) return;
+            list.innerHTML = (state.members || []).map(m => `
+                <div class="flex items-center justify-between p-3 rounded-2xl bg-stone-50 border border-stone-200">
+                    <div class="flex items-center gap-3">
+                        <span class="w-8 h-8 rounded-full flex items-center justify-center bg-white">${m.avatar}</span>
+                        <span class="font-bold text-sm text-stone-800">${m.name}</span>
+                    </div>
+                    ${state.members.length > 1 ? `<button onclick="deleteMember('${m.id}')" class="text-xs text-rose-500 font-semibold">Supprimer</button>` : ''}
+                </div>
+            `).join('');
+        }
+
+        window.openMemberModal = function() {
+            document.getElementById('member-name').value = '';
+            openModal('member-modal');
+        };
+
+        window.saveMember = function(e) {
+            e.preventDefault();
+            const name = document.getElementById('member-name').value.trim();
+            if (!name) return;
+            state.members.push({ id: 'm_' + Date.now(), name, avatar: document.getElementById('member-avatar').value || '😊', color: '#F97316' });
+            saveState();
+            closeModal('member-modal');
+            showToast('Membre ajouté !');
+        };
+
+        window.deleteMember = function(id) {
+            if (state.members.length <= 1) return;
+            state.members = state.members.filter(m => m.id !== id);
+            if (state.memberFilter === id) state.memberFilter = 'all';
+            saveState();
+            openSettingsModal();
+        };
+
+        window.navigateCalendar = function(delta) {
+            const [y, m] = (state.currentMonthDate || '2026-11-01').split('-').map(Number);
+            const dt = new Date(y, m - 1 + delta, 1);
+            state.currentMonthDate = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-01`;
+            renderCalendar();
+        };
+
+        window.goToToday = function() {
+            state.selectedDate = TODAY_STR;
+            state.currentMonthDate = '2026-11-01';
+            renderAll();
+        };
+
+        function renderCalendar() {
+            const [y, m] = (state.currentMonthDate || '2026-11-01').split('-').map(Number);
+            const titleEl = document.getElementById('calendar-period-title');
+            if (titleEl) titleEl.textContent = new Date(y, m - 1, 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+
+            const grid = document.getElementById('calendar-month-grid');
+            if (!grid) return;
+
+            const firstDayIndex = (new Date(y, m - 1, 1).getDay() + 6) % 7;
+            const daysInMonth = new Date(y, m, 0).getDate();
+
+            let html = '';
+            for (let i = 0; i < firstDayIndex; i++) {
+                html += `<div class="min-h-[85px] bg-stone-50/50"></div>`;
+            }
+
+            const filteredEvents = state.memberFilter === 'all' ? (state.events || []) : (state.events || []).filter(ev => ev.memberIds.includes(state.memberFilter));
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateStr = `${y}-${String(m).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const dayEvs = filteredEvents.filter(e => e.date === dateStr);
+                const isToday = dateStr === TODAY_STR;
+                const isSelected = dateStr === state.selectedDate;
+
+                let bgClass = isSelected ? 'bg-orange-50/80 ring-2 ring-orange-400 z-10' : (isToday ? 'bg-amber-50/50' : 'bg-white hover:bg-stone-50');
+
+                html += `
+                    <div onclick="selectCalendarDay('${dateStr}')" class="min-h-[90px] p-2 cursor-pointer transition-all flex flex-col justify-between ${bgClass}">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold ${isToday ? 'w-6 h-6 rounded-full bg-orange-500 text-white flex items-center justify-center' : 'text-stone-700'}">${day}</span>
+                        </div>
+                        <div class="space-y-1 mt-1">
+                            ${dayEvs.slice(0, 2).map(ev => {
+                                const cat = CATEGORIES[ev.category] || CATEGORIES.school;
+                                return `<div class="text-[10px] font-semibold px-1.5 py-0.5 rounded truncate border ${cat.badge}">${ev.start} ${ev.title}</div>`;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            grid.innerHTML = html;
+        }
+
+        window.selectCalendarDay = function(dateStr) {
+            state.selectedDate = dateStr;
+            renderAll();
+        };
+
+        function renderSelectedDayEvents() {
+            const parts = (state.selectedDate || TODAY_STR).split('-');
+            if (parts.length === 3) {
+                const [y, m, d] = parts.map(Number);
+                const titleEl = document.getElementById('selected-day-title');
+                if (titleEl) titleEl.textContent = new Date(y, m - 1, d).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+            }
+
+            const container = document.getElementById('selected-day-events');
+            if (!container) return;
+
+            const filteredEvents = state.memberFilter === 'all' ? (state.events || []) : (state.events || []).filter(ev => ev.memberIds.includes(state.memberFilter));
+            const dayEvs = filteredEvents.filter(e => e.date === state.selectedDate);
+
+            if (dayEvs.length === 0) {
+                container.innerHTML = `<div class="text-center py-8 text-stone-400 text-xs font-semibold">Aucun événement ce jour</div>`;
+                return;
+            }
+
+            container.innerHTML = dayEvs.map(ev => {
+                const cat = CATEGORIES[ev.category] || CATEGORIES.school;
+                const membersBadges = (ev.memberIds || []).map(mid => {
+                    const m = getMember(mid);
+                    return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-white border border-stone-200">${m.avatar} ${m.name}</span>`;
+                }).join('');
+
+                return `
+                    <div onclick="editEvent('${ev.id}')" class="p-3.5 rounded-2xl bg-stone-50 hover:bg-orange-50/60 border border-stone-200 hover:border-orange-300 space-y-2 cursor-pointer transition-all group">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border ${cat.badge}">${cat.icon} ${cat.label}</span>
+                            <div class="flex items-center gap-1">
+                                <span class="text-[11px] text-stone-400 group-hover:text-orange-600 font-semibold transition-colors"><i class="fa-solid fa-pen"></i> Modifier</span>
+                                <button type="button" onclick="event.stopPropagation(); deleteEventById('${ev.id}')" class="w-7 h-7 rounded-lg text-stone-400 hover:bg-rose-100 hover:text-rose-600 flex items-center justify-center transition-colors" title="Supprimer cet événement">
+                                    <i class="fa-solid fa-trash-can text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <h4 class="font-bold text-sm text-stone-800">${ev.title}</h4>
+                        <p class="text-xs text-stone-500 font-medium">🕒 ${ev.start} - ${ev.end}${ev.location ? ` • 📍 ${ev.location}` : ''}</p>
+                        ${ev.note ? `<p class="text-xs text-stone-500 italic bg-white/80 p-2 rounded-xl border border-stone-100">${ev.note}</p>` : ''}
+                        <div class="flex flex-wrap gap-1 pt-0.5">${membersBadges}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        window.openEventModal = function(dateStr = null) {
+            document.getElementById('event-modal-title').textContent = 'Nouvel événement';
+            document.getElementById('event-id').value = '';
+            document.getElementById('event-title').value = '';
+            document.getElementById('event-date').value = dateStr || state.selectedDate || TODAY_STR;
+            document.getElementById('event-start').value = '14:00';
+            document.getElementById('event-end').value = '15:30';
+            document.getElementById('event-category').value = 'school';
+            document.getElementById('event-location').value = '';
+            document.getElementById('event-note').value = '';
+            const delBtn = document.getElementById('delete-event-btn');
+            if (delBtn) delBtn.classList.add('hidden');
+            renderEventMembersCheckboxes([]);
+            openModal('event-modal');
+        };
+
+        window.editEvent = function(eventId) {
+            const ev = (state.events || []).find(x => x.id === eventId);
+            if (!ev) return;
+            document.getElementById('event-modal-title').textContent = 'Modifier l’événement';
+            document.getElementById('event-id').value = ev.id;
+            document.getElementById('event-title').value = ev.title;
+            document.getElementById('event-date').value = ev.date;
+            document.getElementById('event-start').value = ev.start || '14:00';
+            document.getElementById('event-end').value = ev.end || '15:30';
+            document.getElementById('event-category').value = ev.category || 'school';
+            document.getElementById('event-location').value = ev.location || '';
+            document.getElementById('event-note').value = ev.note || '';
+            const delBtn = document.getElementById('delete-event-btn');
+            if (delBtn) delBtn.classList.remove('hidden');
+            renderEventMembersCheckboxes(ev.memberIds || []);
+            openModal('event-modal');
+        };
+
+        function renderEventMembersCheckboxes(selectedIds) {
+            const container = document.getElementById('event-members-selector');
+            if (!container) return;
+            container.innerHTML = (state.members || []).map(m => `
+                <label class="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-stone-200 cursor-pointer bg-stone-50 text-xs font-semibold">
+                    <input type="checkbox" name="event-member" value="${m.id}" ${selectedIds.length === 0 || selectedIds.includes(m.id) ? 'checked' : ''} class="accent-orange-500">
+                    <span>${m.avatar} ${m.name}</span>
+                </label>
+            `).join('');
+        }
+
+        window.saveEvent = function(e) {
+            e.preventDefault();
+            const existingId = document.getElementById('event-id').value;
+            const title = document.getElementById('event-title').value.trim();
+            const date = document.getElementById('event-date').value;
+            const start = document.getElementById('event-start').value;
+            const end = document.getElementById('event-end').value;
+            const category = document.getElementById('event-category').value;
+            const location = document.getElementById('event-location').value.trim();
+            const note = document.getElementById('event-note').value.trim();
+
+            const checkedBoxes = document.querySelectorAll('input[name="event-member"]:checked');
+            const memberIds = Array.from(checkedBoxes).map(cb => cb.value);
+
+            if (!title || memberIds.length === 0) {
+                showToast('Veuillez renseigner un titre et au moins un membre');
+                return;
+            }
+
+            if (existingId) {
+                const idx = state.events.findIndex(x => x.id === existingId);
+                if (idx !== -1) {
+                    state.events[idx] = { id: existingId, title, date, start, end, memberIds, category, location, note };
+                    addNotification('✏️', `Événement modifié : "${title}" (${date})`);
+                }
+                showToast('Événement mis à jour !');
+            } else {
+                state.events.push({ id: 'e_' + Date.now(), title, date, start, end, memberIds, category, location, note });
+                addNotification('📅', `Nouvel événement : "${title}" (${date})`);
+                showToast('Événement enregistré !');
+            }
+
+            saveState();
+            closeModal('event-modal');
+        };
+
+        window.deleteEventById = function(eventId) {
+            const ev = (state.events || []).find(x => x.id === eventId);
+            if (!ev) return;
+            state.events = state.events.filter(x => x.id !== eventId);
+            addNotification('🗑️', `Événement supprimé : "${ev.title}"`);
+            saveState();
+            showToast('Événement supprimé !');
+        };
+
+        window.deleteCurrentEvent = function() {
+            const existingId = document.getElementById('event-id').value;
+            if (!existingId) return;
+            deleteEventById(existingId);
+            closeModal('event-modal');
+        };
+
+        window.openNewListModal = function() { openModal('new-list-modal'); };
+        window.createNewList = function(e) {
+            e.preventDefault();
+            const title = document.getElementById('new-list-title').value.trim();
+            if (!title) return;
+            state.lists.push({ id: 'l_' + Date.now(), title, icon: '🛒', items: [] });
+            addNotification('📋', `Nouvelle liste créée : "${title}"`);
+            saveState();
+            closeModal('new-list-modal');
+            showToast('Liste créée !');
+        };
+
+        function renderLists() {
+            const grid = document.getElementById('lists-grid');
+            if (!grid) return;
+            grid.innerHTML = (state.lists || []).map(l => `
+                <div class="bg-white rounded-2xl p-4 border border-stone-200 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-bold text-stone-800">${l.icon} ${l.title}</h3>
+                        <button onclick="deleteList('${l.id}')" class="text-xs text-rose-500 font-semibold"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                    <div class="space-y-1.5">
+                        ${(l.items || []).map((item, idx) => `
+                            <label class="flex items-center gap-2 text-sm text-stone-700 cursor-pointer">
+                                <input type="checkbox" ${item.checked ? 'checked' : ''} onchange="toggleItem('${l.id}', '${item.id}')" class="accent-emerald-600">
+                                <span class="${item.checked ? 'line-through text-stone-400' : ''}">${item.text}</span>
+                            </label>
+                        `).join('')}
+                    </div>
+                    <div class="flex gap-2 pt-2">
+                        <input type="text" id="add-item-${l.id}" placeholder="Ajouter un article..." class="w-full px-3 py-1.5 rounded-xl border border-stone-200 text-xs">
+                        <button onclick="addItem('${l.id}')" class="px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-semibold">Ajouter</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        window.addItem = function(listId) {
+            const input = document.getElementById(`add-item-${listId}`);
+            const text = input ? input.value.trim() : '';
+            if (!text) return;
+            const list = state.lists.find(l => l.id === listId);
+            if (list) {
+                list.items.push({ id: 'i_' + Date.now(), text, checked: false });
+                addNotification('🛒', `"${text}" ajouté à ${list.title}`);
+                saveState();
+            }
+        };
+
+        window.toggleItem = function(listId, itemId) {
+            const list = state.lists.find(l => l.id === listId);
+            if (list) {
+                const item = list.items.find(i => i.id === itemId);
+                if (item) { item.checked = !item.checked; saveState(); }
+            }
+        };
+
+        window.deleteList = function(listId) {
+            state.lists = state.lists.filter(l => l.id !== listId);
+            saveState();
+            showToast('Liste supprimée');
+        };
+
+        window.openChoreModal = function() {
+            const select = document.getElementById('chore-assignee');
+            if (select) {
+                select.innerHTML = (state.members || []).map(m => `<option value="${m.id}">${m.avatar} ${m.name}</option>`).join('');
+            }
+            openModal('chore-modal');
+        };
+
+        window.saveChore = function(e) {
+            e.preventDefault();
+            const title = document.getElementById('chore-title').value.trim();
+            const assigneeId = document.getElementById('chore-assignee').value;
+            if (!title) return;
+            const member = getMember(assigneeId);
+            state.chores.push({ id: 'c_' + Date.now(), title, assigneeId, stars: 2, completed: false });
+            addNotification('⭐', `Nouvelle mission pour ${member.name} : "${title}"`);
+            saveState();
+            closeModal('chore-modal');
+            showToast('Mission ajoutée !');
+        };
+
+        function renderChores() {
+            const pendingList = document.getElementById('pending-chores-list');
+            const completedList = document.getElementById('completed-chores-list');
+            const scoreboard = document.getElementById('chores-scoreboard');
+
+            if (scoreboard) {
+                scoreboard.innerHTML = (state.members || []).map(m => {
+                    const starsCount = (state.chores || []).filter(c => c.assigneeId === m.id && c.completed).reduce((acc, c) => acc + (c.stars || 1), 0);
+                    return `
+                        <div class="bg-white/80 rounded-2xl p-3 border border-amber-200/80 text-center">
+                            <div class="text-2xl">${m.avatar}</div>
+                            <div class="font-bold text-sm text-stone-800 mt-1">${m.name}</div>
+                            <div class="text-xs font-extrabold text-amber-600 mt-0.5">⭐ ${starsCount} étoiles</div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            if (pendingList) {
+                const pending = (state.chores || []).filter(c => !c.completed);
+                pendingList.innerHTML = pending.length === 0 ? `<div class="text-xs text-stone-400">Aucune mission en cours</div>` : pending.map(c => {
+                    const m = getMember(c.assigneeId);
+                    return `
+                        <div class="flex items-center justify-between gap-2 p-3 rounded-2xl bg-stone-50 border border-stone-200">
+                            <div class="min-w-0 flex-1">
+                                <h4 class="font-bold text-sm text-stone-800 truncate">${c.title}</h4>
+                                <span class="text-xs text-stone-500">${m.avatar} ${m.name} • ⭐ ${c.stars}</span>
+                            </div>
+                            <div class="flex items-center gap-1.5 shrink-0">
+                                <button onclick="toggleChore('${c.id}')" class="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold transition-colors">Valider</button>
+                                <button onclick="deleteChore('${c.id}')" class="w-8 h-8 rounded-xl bg-white hover:bg-rose-50 text-stone-400 hover:text-rose-600 border border-stone-200 flex items-center justify-center transition-colors" title="Supprimer la mission">
+                                    <i class="fa-solid fa-trash-can text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            if (completedList) {
+                const completed = (state.chores || []).filter(c => c.completed);
+                completedList.innerHTML = completed.length === 0 ? `<div class="text-xs text-stone-400">Aucune mission accomplie</div>` : completed.map(c => {
+                    const m = getMember(c.assigneeId);
+                    return `
+                        <div class="flex items-center justify-between gap-2 p-3 rounded-2xl bg-stone-50 border border-stone-200">
+                            <div class="min-w-0 flex-1 opacity-70">
+                                <h4 class="font-bold text-sm text-stone-800 line-through truncate">${c.title}</h4>
+                                <span class="text-xs text-stone-500">${m.avatar} ${m.name} • ⭐ ${c.stars}</span>
+                            </div>
+                            <div class="flex items-center gap-1.5 shrink-0">
+                                <button onclick="toggleChore('${c.id}')" class="px-2.5 py-1.5 rounded-xl bg-white hover:bg-amber-50 text-stone-600 hover:text-amber-700 border border-stone-200 text-xs font-semibold flex items-center gap-1 transition-colors" title="Remettre la mission à faire">
+                                    <i class="fa-solid fa-rotate-left text-[11px]"></i>
+                                    <span>Remettre</span>
+                                </button>
+                                <button onclick="deleteChore('${c.id}')" class="w-8 h-8 rounded-xl bg-white hover:bg-rose-50 text-stone-400 hover:text-rose-600 border border-stone-200 flex items-center justify-center transition-colors" title="Supprimer définitivement">
+                                    <i class="fa-solid fa-trash-can text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        window.toggleChore = function(id) {
+            const c = (state.chores || []).find(x => x.id === id);
+            if (c) {
+                c.completed = !c.completed;
+                if (c.completed) {
+                    const m = getMember(c.assigneeId);
+                    addNotification('🌟', `${m.name} a accompli la mission "${c.title}" (+${c.stars} ⭐)`);
+                    showToast('Mission validée ! ⭐');
+                } else {
+                    showToast('Mission remise dans la liste à faire');
+                }
+                saveState();
+            }
+        };
+
+        window.deleteChore = function(id) {
+            const c = (state.chores || []).find(x => x.id === id);
+            if (!c) return;
+            state.chores = state.chores.filter(x => x.id !== id);
+            addNotification('🗑️', `Mission supprimée : "${c.title}"`);
+            saveState();
+            showToast('Mission supprimée !');
+        };
+
+        window.openNoteModal = function() { openModal('note-modal'); };
+        window.saveNote = function(e) {
+            e.preventDefault();
+            const text = document.getElementById('note-text').value.trim();
+            if (!text) return;
+            state.notes.push({ id: 'n_' + Date.now(), text, color: '#FEF3C7', pinned: true });
+            addNotification('📌', `Nouveau mot sur le mur : "${text.slice(0, 35)}${text.length > 35 ? '...' : ''}"`);
+            saveState();
+            closeModal('note-modal');
+            showToast('Note publiée !');
+        };
+
+        function renderWall() {
+            const grid = document.getElementById('wall-notes-grid');
+            if (!grid) return;
+            grid.innerHTML = (state.notes || []).map(n => `
+                <div class="p-4 rounded-2xl shadow-sm border border-amber-200/60 relative flex flex-col justify-between min-h-[140px]" style="background-color: ${n.color || '#FEF3C7'}">
+                    <p class="text-sm font-hand font-bold text-stone-800 whitespace-pre-wrap">${n.text}</p>
+                    <button onclick="deleteNote('${n.id}')" class="absolute top-2 right-2 text-stone-400 hover:text-rose-600 text-xs"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+            `).join('');
+        }
+
+        window.deleteNote = function(id) {
+            state.notes = state.notes.filter(n => n.id !== id);
+            saveState();
+        };
+
+        window.copyTribeCode = function() {
+            const input = document.getElementById('share-tribe-code-display');
+            input.select();
+            document.execCommand('copy');
+            showToast('Code Tribu copié !');
+        };
+
+        window.joinAnotherTribe = function(e) {
+            e.preventDefault();
+            const code = document.getElementById('join-tribe-input').value.trim();
+            if (!code) return;
+            closeModal('share-modal');
+            connectToTribe(code);
+        };
+
+        function renderAll() {
+            const famEl = document.getElementById('family-title-display');
+            if (famEl) famEl.textContent = state.familyName;
+            renderNotificationsBadge();
+            renderMemberFilters();
+            switchTab(state.activeTab || 'calendar');
+            renderCalendar();
+            renderSelectedDayEvents();
+            renderLists();
+            renderChores();
+            renderWall();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initFirebaseSync();
+
+            const headerBtn = document.getElementById('header-add-event-btn');
+            if (headerBtn) headerBtn.addEventListener('click', () => openEventModal(state.selectedDate));
+
+            const sidebarBtn = document.getElementById('sidebar-add-event-btn');
+            if (sidebarBtn) sidebarBtn.addEventListener('click', () => openEventModal(state.selectedDate));
+        });
+    </script>
+</body>
+</html>

@@ -498,7 +498,7 @@
         let unsubscribeTribe = null;
 
         const urlParams = new URLSearchParams(window.location.search);
-        let currentTribeCode = urlParams.get('tribu') ? urlParams.get('tribu').toUpperCase().replace(/[^A-Z0-9-]/g, '') : 'DUPONT-2026';
+        let currentTribeCode = urlParams.get('tribu') ? urlParams.get('tribu').toUpperCase().replace(/[^A-Z0-9-]/g, '') : '70230';
 
         const CATEGORIES = {
             school: { label: 'École', icon: '🎒', badge: 'bg-blue-50 text-blue-700 border-blue-200' },
@@ -510,7 +510,7 @@
 
         function getDefaultState() {
             return {
-                familyName: 'Famille Dupont',
+                familyName: 'Famille BERNARD',
                 activeTab: 'calendar',
                 currentMonthDate: '2026-11-01',
                 selectedDate: TODAY_STR,
@@ -598,7 +598,7 @@
         }
 
         async function connectToTribe(tribeCode) {
-            currentTribeCode = tribeCode.toUpperCase().replace(/[^A-Z0-9-]/g, '') || 'DUPONT-2026';
+            currentTribeCode = tribeCode.toUpperCase().replace(/[^A-Z0-9-]/g, '') || '70230';
             try {
                 if (window.location.protocol !== 'blob:') {
                     window.history.replaceState({}, '', `${window.location.pathname}?tribu=${currentTribeCode}`);

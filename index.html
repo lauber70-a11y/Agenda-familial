@@ -475,8 +475,8 @@
         // =========================================================================
         // 🔑 CONFIGURATION FIREBASE (COLLEZ VOS CLÉS ICI SI VOUS HÉBERGEZ LE SITE)
         // =========================================================================
-        const CUSTOM_FIREBASE_CONFIG = {
-           apiKey: "AIzaSyAFUnjtmIDLnBu44-X1b6hMO9gUP0gEuYk",
+       const firebaseConfig = {
+  apiKey: "AIzaSyAFUnjtmIDLnBu44-X1b6hMO9gUP0gEuYk",
   authDomain: "planning-familial-88790.firebaseapp.com",
   databaseURL: "https://planning-familial-88790-default-rtdb.firebaseio.com",
   projectId: "planning-familial-88790",
@@ -485,6 +485,10 @@
   appId: "1:966936866130:web:d2761eccc77780dbbd1e8b",
   measurementId: "G-NNEFMP42D2"
 };
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
         // =========================================================================
 
         const TODAY_STR = '2026-11-16';

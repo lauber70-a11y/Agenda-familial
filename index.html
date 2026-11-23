@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agenda familial</title>
+    <title>Mur Familial — Calendrier & Synchronisation</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts -->
@@ -61,9 +61,10 @@
                             <button onclick="openSettingsModal()" class="text-stone-400 hover:text-orange-500 text-xs p-1 rounded-lg">
                                 <i class="fa-solid fa-pen"></i>
                             </button>
-                            <span onclick="openShareModal()" id="sync-tribe-badge" class="cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition shadow-2xs">
-                                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <span onclick="openShareModal()" id="sync-tribe-badge" class="cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200 hover:opacity-90 transition shadow-2xs" title="Cliquer pour voir l'état de la synchronisation">
+                                <span id="sync-status-dot" class="w-2 h-2 rounded-full bg-amber-500"></span>
                                 <span id="sync-tribe-text">Tribu : DUPONT-2026</span>
+                                <span id="sync-mode-label" class="text-[10px] opacity-80">(Local)</span>
                             </span>
                         </div>
                         <p id="current-date-subtitle" class="text-xs sm:text-sm text-stone-500 font-medium capitalize">
@@ -319,6 +320,9 @@
             </div>
             <div class="space-y-3">
                 <p class="text-sm text-stone-600">Connectez vos tablettes et téléphones en temps réel avec le <strong>Code Tribu</strong>.</p>
+                <div id="sync-diagnostic-box" class="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-800">
+                    <strong>État :</strong> <span id="sync-diagnostic-text">Vérification de la connexion Firebase...</span>
+                </div>
                 <div class="bg-emerald-50 p-3.5 rounded-2xl border border-emerald-200 space-y-2">
                     <label class="text-xs font-bold uppercase text-emerald-800">Code Tribu Actif</label>
                     <div class="flex items-center gap-2">
@@ -475,18 +479,14 @@
         // =========================================================================
         // 🔑 CONFIGURATION FIREBASE (COLLEZ VOS CLÉS ICI SI VOUS HÉBERGEZ LE SITE)
         // =========================================================================
-       const firebaseConfig = {
-  apiKey: "AIzaSyAFUnjtmIDLnBu44-X1b6hMO9gUP0gEuYk",
-  authDomain: "planning-familial-88790.firebaseapp.com",
-  databaseURL: "https://planning-familial-88790-default-rtdb.firebaseio.com",
-  projectId: "planning-familial-88790",
-  storageBucket: "planning-familial-88790.firebasestorage.app",
-  messagingSenderId: "966936866130",
-  appId: "1:966936866130:web:d2761eccc77780dbbd1e8b",
-  measurementId: "G-NNEFMP42D2"
-};
-
-
+        const CUSTOM_FIREBASE_CONFIG = {
+            apiKey: "",            // Ex: "AIzaSyD..."
+            authDomain: "",        // Ex: "votre-projet.firebaseapp.com"
+            projectId: "",         // Ex: "votre-projet"
+            storageBucket: "",     // Ex: "votre-projet.appspot.com"
+            messagingSenderId: "", // Ex: "123456789"
+            appId: ""              // Ex: "1:123456789:web:abcdef"
+        };
         // =========================================================================
 
         const TODAY_STR = '2026-11-16';
@@ -539,16 +539,38 @@
 
         let state = getDefaultState();
 
+        function updateSyncStatusUI(isCloudConnected, diagnosticMsg) {
+            const badge = document.getElementById('sync-tribe-badge');
+            const dot = document.getElementById('sync-status-dot');
+            const modeLabel = document.getElementById('sync-mode-label');
+            const diagBox = document.getElementById('sync-diagnostic-box');
+            const diagText = document.getElementById('sync-diagnostic-text');
+
+            if (isCloudConnected) {
+                if (badge) badge.className = "cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:opacity-90 transition shadow-2xs";
+                if (dot) dot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
+                if (modeLabel) modeLabel.textContent = "(Cloud Live)";
+                if (diagBox) diagBox.className = "p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800";
+            } else {
+                if (badge) badge.className = "cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200 hover:opacity-90 transition shadow-2xs";
+                if (dot) dot.className = "w-2 h-2 rounded-full bg-amber-500";
+                if (modeLabel) modeLabel.textContent = "(Local)";
+                if (diagBox) diagBox.className = "p-3 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-800";
+            }
+            if (diagText) diagText.textContent = diagnosticMsg;
+        }
+
         async function initFirebaseSync() {
             try {
                 let firebaseConfig = null;
-                if (CUSTOM_FIREBASE_CONFIG && CUSTOM_FIREBASE_CONFIG.apiKey) {
+                if (CUSTOM_FIREBASE_CONFIG && CUSTOM_FIREBASE_CONFIG.apiKey && CUSTOM_FIREBASE_CONFIG.apiKey.trim() !== "") {
                     firebaseConfig = CUSTOM_FIREBASE_CONFIG;
                 } else if (typeof __firebase_config !== 'undefined') {
                     firebaseConfig = JSON.parse(__firebase_config);
                 }
 
                 if (!firebaseConfig) {
+                    updateSyncStatusUI(false, "Mode local uniquement : aucune clé Firebase configurée dans CUSTOM_FIREBASE_CONFIG.");
                     initAppLocally();
                     return;
                 }
@@ -566,18 +588,34 @@
                 }
                 await connectToTribe(currentTribeCode);
             } catch (err) {
+                console.error("Erreur Firebase:", err);
+                const errMsg = err && err.code === 'auth/operation-not-allowed'
+                    ? "Erreur Firebase : activez la connexion 'Anonyme' dans Authentication > Sign-in method."
+                    : `Erreur Firebase (${err.code || err.message}). Bascule en mode local.`;
+                updateSyncStatusUI(false, errMsg);
                 initAppLocally();
             }
         }
 
         async function connectToTribe(tribeCode) {
             currentTribeCode = tribeCode.toUpperCase().replace(/[^A-Z0-9-]/g, '') || 'DUPONT-2026';
-            window.history.replaceState({}, '', `${window.location.pathname}?tribu=${currentTribeCode}`);
+            try {
+                if (window.location.protocol !== 'blob:') {
+                    window.history.replaceState({}, '', `${window.location.pathname}?tribu=${currentTribeCode}`);
+                }
+            } catch (e) {
+                // Ignorer si l'environnement sandbox/iframe interdit replaceState
+            }
 
             const displayEl = document.getElementById('share-tribe-code-display');
             if (displayEl) displayEl.value = currentTribeCode;
             const textEl = document.getElementById('sync-tribe-text');
             if (textEl) textEl.textContent = `Tribu : ${currentTribeCode}`;
+
+            if (!db || !currentUser) {
+                updateSyncStatusUI(false, "Mode local actif (Firebase non connecté).");
+                return;
+            }
 
             if (unsubscribeTribe) {
                 unsubscribeTribe();
@@ -590,7 +628,15 @@
                 if (!snap.exists()) {
                     await setDoc(docRef, { payload: JSON.stringify(getDefaultState()), updatedAt: Date.now() });
                 }
-            } catch (e) {}
+                updateSyncStatusUI(true, `Connecté en temps réel au Cloud Firebase (Tribu ${currentTribeCode}).`);
+            } catch (e) {
+                console.error("Erreur Firestore:", e);
+                const permMsg = e && e.code === 'permission-denied'
+                    ? "Accès refusé par Firestore : passez les règles Firestore en mode test (allow read, write: if true;)."
+                    : `Erreur base de données Firestore (${e.code || e.message}).`;
+                updateSyncStatusUI(false, permMsg);
+                return;
+            }
 
             unsubscribeTribe = onSnapshot(docRef, (docSnap) => {
                 if (docSnap.exists()) {
@@ -599,11 +645,15 @@
                         try {
                             const remoteState = JSON.parse(data.payload);
                             state = { ...remoteState, activeTab: state.activeTab, selectedDate: state.selectedDate, memberFilter: state.memberFilter };
+                            updateSyncStatusUI(true, `Connecté en temps réel au Cloud Firebase (Tribu ${currentTribeCode}).`);
                             renderAll();
                         } catch (err) {}
                     }
                 }
-            }, (error) => {});
+            }, (error) => {
+                console.error("Erreur onSnapshot:", error);
+                updateSyncStatusUI(false, `Interruption temps réel Firestore (${error.code || error.message}).`);
+            });
         }
 
         async function saveState() {
@@ -615,7 +665,10 @@
             try {
                 const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'families_data', currentTribeCode);
                 await setDoc(docRef, { payload: JSON.stringify(state), updatedAt: Date.now() });
-            } catch (e) {}
+            } catch (e) {
+                console.error("Erreur sauvegarde Firestore:", e);
+                showToast("Erreur sauvegarde Cloud : vérifiez les règles Firestore");
+            }
         }
 
         function initAppLocally() {

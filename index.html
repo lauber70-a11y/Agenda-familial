@@ -472,6 +472,19 @@
         import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+        // =========================================================================
+        // 🔑 CONFIGURATION FIREBASE (COLLEZ VOS CLÉS ICI SI VOUS HÉBERGEZ LE SITE)
+        // =========================================================================
+        const CUSTOM_FIREBASE_CONFIG = {
+            apiKey: "",            // Ex: "AIzaSyD..."
+            authDomain: "",        // Ex: "votre-projet.firebaseapp.com"
+            projectId: "",         // Ex: "votre-projet"
+            storageBucket: "",     // Ex: "votre-projet.appspot.com"
+            messagingSenderId: "", // Ex: "123456789"
+            appId: ""              // Ex: "1:123456789:web:abcdef"
+        };
+        // =========================================================================
+
         const TODAY_STR = '2026-11-16';
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'family-wall-app';
 
@@ -524,11 +537,18 @@
 
         async function initFirebaseSync() {
             try {
-                if (typeof __firebase_config === 'undefined') {
+                let firebaseConfig = null;
+                if (CUSTOM_FIREBASE_CONFIG && CUSTOM_FIREBASE_CONFIG.apiKey) {
+                    firebaseConfig = CUSTOM_FIREBASE_CONFIG;
+                } else if (typeof __firebase_config !== 'undefined') {
+                    firebaseConfig = JSON.parse(__firebase_config);
+                }
+
+                if (!firebaseConfig) {
                     initAppLocally();
                     return;
                 }
-                const firebaseConfig = JSON.parse(__firebase_config);
+
                 const app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
                 db = getFirestore(app);
@@ -650,7 +670,6 @@
                 }
             }
 
-            // Marquer toutes les notifications comme lues
             let hasUnread = false;
             notifs.forEach(n => {
                 if (!n.read) {
